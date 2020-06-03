@@ -11,9 +11,9 @@
 TOP = ../../..
 
 # place the parameters you want to scan here.
-BSG_TESTME_FILES    = bsg_mesh_router.v
+BSG_TESTME_FILES    = bsg_mesh_router_age_arb.v
 BSG_TESTME_DIR      = $(TOP)/bsg_noc
-BSG_MISC_FILES      = bsg_defines.v bsg_mux_one_hot.v bsg_encode_one_hot.v bsg_circular_ptr.v bsg_round_robin_arb.v bsg_cycle_counter.v 
+BSG_MISC_FILES      = bsg_age_arb.v bsg_defines.v bsg_mux_one_hot.v bsg_encode_one_hot.v bsg_circular_ptr.v bsg_cycle_counter.v 
 BSG_ASYNC_FILES     =
 BSG_COMM_LINK_FILES =
 BSG_DATAFLOW_FILES  = bsg_fifo_1r1w_small.v
@@ -45,7 +45,7 @@ MESH_EDGE_P  = 0 1 2
 
 
 ############################# SIMULATOR COMMANDS ###########################
-BSG_IP_CORES_COMP = vlog -sv -mfcu $(ALL_FILES) -quiet
+BSG_IP_CORES_COMP = verilator --cc $(ALL_FILES) -I../../../bsg_noc -I../../../bsg_misc -I../../../bsg_mem -I../../../bsg_test --top-module test_bsg -Wno-fatal
 BSG_IP_CORES_SIM  = vsim -batch $(TEST_MODULE) -do "run -all; quit -f"
 ############################################################################
 
@@ -86,8 +86,9 @@ all: initial $(foreach x,$(commands),run.$(x))
 # command line options
 
 run.%:
-	$(BSG_IP_CORES_COMP) $(subst @, ,$*)
-	$(BSG_IP_CORES_SIM) >> outfile
-  
+	$(BSG_IP_CORES_COMP)
+#	$(BSG_IP_CORES_SIM) >> outfile
+# $(subst @, ,$*)
+
 initial:
 	rm -f outfile
