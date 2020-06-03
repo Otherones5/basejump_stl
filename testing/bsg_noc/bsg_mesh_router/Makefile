@@ -87,6 +87,6 @@ all: initial $(foreach x,$(commands),run.$(x))
 
 run.%:
 	$(BSG_IP_CORES_COMP)
- 
+
 initial:
 	rm -f outfile
