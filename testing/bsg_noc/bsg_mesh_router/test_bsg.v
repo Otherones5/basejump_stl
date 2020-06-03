@@ -1,4 +1,5 @@
 `define DATA_WIDTH_P 4
+`define TS_WIDTH_P   6
 `define MESH_EDGE_P  2 // tests a 2^(MESH_EDGE_P) x 2^(MESH_EDGE_P) mesh network
 
 /************************** TEST RATIONALE *********************************
@@ -26,17 +27,19 @@ import bsg_noc_pkg::Dirs
        , bsg_noc_pkg::S; // south
 
 
-module test_bsg;
+module test_bsg
+  (input i_clk);
   
   // clock and reset generation
-  localparam cycle_time_lp = 20; 
+  localparam cycle_time_lp = 20;
   wire clk;
   wire reset;
 
-  bsg_nonsynth_clock_gen #(  .cycle_time_p(cycle_time_lp)
-                          )  clock_gen
-                          (  .o(clk)
-                          );
+  assign clk = i_clk;
+  // bsg_nonsynth_clock_gen #(  .cycle_time_p(cycle_time_lp)
+  //                         )  clock_gen
+  //                         (  .o(clk)
+  //                         );
     
   bsg_nonsynth_reset_gen #(  .num_clocks_p     (1)
                            , .reset_cycles_lo_p(0)
@@ -53,7 +56,8 @@ module test_bsg;
   
   // data width including embedded coordinates
   localparam width_lp = (`DATA_WIDTH_P) + lg_node_x_lp + lg_node_y_lp;
-  
+  localparam ts_width_lp = (`TS_WIDTH_P);
+
   localparam dirs_lp = 5;
   
   initial
@@ -70,12 +74,12 @@ module test_bsg;
   logic [msize_lp-1:0][dirs_lp-1:0] test_input_valid;
   logic [msize_lp-1:0][dirs_lp-1:0] test_input_ready;
   logic [msize_lp-1:0][dirs_lp-1:0][width_lp-1:0] test_input_data;
+  logic [msize_lp-1:0][dirs_lp-1:0][ts_width_lp-1:0] test_input_ts;
 
   logic [msize_lp-1:0][dirs_lp-1:0] test_output_yumi;
   logic [msize_lp-1:0][dirs_lp-1:0] test_output_valid;
   logic [msize_lp-1:0][dirs_lp-1:0][width_lp-1:0] test_output_data;
-
-  
+  logic [msize_lp-1:0][dirs_lp-1:0][ts_width_lp-1:0] test_output_ts;
   
   /*******************************************************
   * Instantiation of medge_lp x medge_lp mesh network
@@ -84,27 +88,29 @@ module test_bsg;
   
   genvar i, j; 
   
-  for(i=0; i<msize_lp; i=i+1)                  
-    bsg_mesh_router
-   #(.dirs_lp       (dirs_lp)
-    ,.width_p       (width_lp)
-    ,.x_cord_width_p(lg_node_x_lp)
-    ,.y_cord_width_p(lg_node_y_lp)
-    ) uut
-    (.clk_i  (clk)
-    ,.reset_i(reset)
+  for(i=0; i<msize_lp; i=i+1)
+    bsg_mesh_router_age_arb #( .dirs_p     (dirs_lp)
+                              ,.width_p    (width_lp)
+                              ,.ts_width_p (ts_width_lp)
+                              ,.lg_node_x_p(lg_node_x_lp)
+                              ,.lg_node_y_p(lg_node_y_lp)
+                              ) uut
+                     ( .clk_i  (clk)
+                      ,.reset_i(reset)
+                      
+                      ,.data_i (test_input_data[i])
+                      ,.ts_i   (test_input_ts[i])
+                      ,.valid_i(test_input_valid[i])
+                      ,.yumi_o (test_output_yumi[i])
 
-    ,.data_i (test_input_data[i])
-    ,.v_i    (test_input_valid[i])
-    ,.yumi_o (test_output_yumi[i])
+                      ,.data_o (test_output_data[i])
+                      ,.ts_o   (test_output_ts[i])
+                      ,.valid_o(test_output_valid[i])
+                      ,.ready_i(test_input_ready[i])
 
-    ,.ready_i(test_input_ready[i])
-    ,.data_o (test_output_data[i])
-    ,.v_o    (test_output_valid[i])
-
-    ,.my_x_i(lg_node_x_lp'(i%medge_lp))
-    ,.my_y_i(lg_node_y_lp'(i/medge_lp))
-    );
+                      ,.my_x_i(lg_node_x_lp'(i%medge_lp))
+                      ,.my_y_i(lg_node_y_lp'(i/medge_lp))
+                     );
 
   // disables the peripheral ports of the mesh
   for(i=0; i<msize_lp; i=i+1)
@@ -215,12 +221,88 @@ module test_bsg;
     end
   end
 
+  // vertical fifos => ts flow N to S or vice-versa
+  for(i=0; i<((medge_lp)*(medge_lp-1)); i=i+1)
+  begin
+    bsg_fifo_1r1w_small #( .width_p(ts_width_lp)
+                          ,.els_p  (msize_lp)
+                          ,.ready_THEN_valid_p(0)
+                         ) ts_fifo_up // north to south ts flow
+                         ( .clk_i  (clk)
+                          ,.reset_i(reset)
+
+                          ,.data_i (test_output_ts[i][S])
+                          ,.v_i    (test_output_valid[i][S])
+                          ,.ready_o(test_input_ready[i][S])
+
+                          ,.data_o(test_input_ts[i+medge_lp][N])
+                          ,.v_o   (test_input_valid[i+medge_lp][N])
+                          ,.yumi_i(test_output_yumi[i+medge_lp][N])
+                         );
+
+    bsg_fifo_1r1w_small #( .width_p(ts_width_lp)
+                          ,.els_p  (msize_lp)
+                          ,.ready_THEN_valid_p(0)
+                         ) ts_fifo_down // south to north ts flow
+                         ( .clk_i  (clk)
+                          ,.reset_i(reset)
+
+                          ,.data_i (test_output_ts[i+medge_lp][N])
+                          ,.v_i    (test_output_valid[i+medge_lp][N])
+                          ,.ready_o(test_input_ready[i+medge_lp][N])
+
+                          ,.data_o(test_input_ts[i][S])
+                          ,.v_o   (test_input_valid[i][S])
+                          ,.yumi_i(test_output_yumi[i][S])
+                         );
+  end
+
+  // horizontal fifos => ts flow E to W or vice versa
+  for(i=0; i<medge_lp; i=i+1)
+  begin
+    for(j=0; j<medge_lp-1; j=j+1)
+    begin
+      bsg_fifo_1r1w_small #( .width_p(ts_width_lp)
+                            ,.els_p  (msize_lp)
+                            ,.ready_THEN_valid_p(0)
+                           ) ts_fifo_right // west to east ts flow
+                           ( .clk_i  (clk)
+                            ,.reset_i(reset)
+
+                            ,.data_i (test_output_ts[i*medge_lp + j][E])
+                            ,.v_i    (test_output_valid[i*medge_lp + j][E])
+                            ,.ready_o(test_input_ready[i*medge_lp + j][E])
+
+                            ,.data_o(test_input_ts[i*medge_lp+j+1][W])
+                            ,.v_o   (test_input_valid[i*medge_lp+j+1][W])
+                            ,.yumi_i(test_output_yumi[i*medge_lp+j+1][W])
+                           );
+
+      bsg_fifo_1r1w_small #( .width_p(ts_width_lp)
+                            ,.els_p  (msize_lp)
+                            ,.ready_THEN_valid_p(0)
+                           ) ts_fifo_left // east to west ts flow
+                           ( .clk_i  (clk)
+                            ,.reset_i(reset)
+
+                            ,.data_i (test_output_ts[i*medge_lp+j+1][W])
+                            ,.v_i    (test_output_valid[i*medge_lp+j+1][W])
+                            ,.ready_o(test_input_ready[i*medge_lp+j+1][W])
+
+                            ,.data_o(test_input_ts[i*medge_lp+j][E])
+                            ,.v_o   (test_input_valid[i*medge_lp+j][E])
+                            ,.yumi_i(test_output_yumi[i*medge_lp+j][E])
+                           );
+    end
+  end
+
 
   // proc fifo
   
   // actual test data;
   // fed through input proc fifo
   logic [msize_lp-1:0][width_lp-1:0] test_stim_data_in;
+  logic [msize_lp-1:0][ts_width_lp-1:0] test_stim_ts_in;
   logic [msize_lp-1:0] test_stim_valid_in;
   logic [msize_lp-1:0] test_stim_ready_out;
 
@@ -232,12 +314,28 @@ module test_bsg;
                          ) fifo_proc_in
                          ( .clk_i  (clk)
                           ,.reset_i(reset)
-                          
+
                           ,.data_i (test_stim_data_in[i])
                           ,.v_i    (test_stim_valid_in[i])
                           ,.ready_o(test_stim_ready_out[i])
 
                           ,.data_o(test_input_data[i][P])
+                          ,.v_o   (test_input_valid[i][P])
+                          ,.yumi_i(test_output_yumi[i][P])
+                         );
+
+    bsg_fifo_1r1w_small #( .width_p(ts_width_lp)
+                          ,.els_p  (msize_lp)
+                          ,.ready_THEN_valid_p(0)
+                         ) ts_fifo_proc_in
+                         ( .clk_i  (clk)
+                          ,.reset_i(reset)
+
+                          ,.data_i (test_stim_ts_in[i])
+                          ,.v_i    (test_stim_valid_in[i])
+                          ,.ready_o(test_stim_ready_out[i])
+
+                          ,.data_o(test_input_ts[i][P])
                           ,.v_o   (test_input_valid[i][P])
                           ,.yumi_i(test_output_yumi[i][P])
                          );
@@ -252,33 +350,41 @@ module test_bsg;
   
   logic [msize_lp-1:0][lg_node_x_lp+lg_node_y_lp-1:0] count;
   logic [msize_lp-1:0] finish_input; // if high, data input to mesh is finished
+  logic [ts_width_lp-1:0] global_ts;
   
   for(i=0; i<msize_lp; i=i+1)
-  begin
-    assign test_input_ready[i][P] = 1'b1;
-    assign test_stim_data_in[i] = {(width_lp-lg_node_x_lp-lg_node_x_lp)'(i)
-                                  ,((lg_node_x_lp+lg_node_y_lp)'(i))^count[i]
-                                  };
-    assign test_stim_valid_in[i] = ~(finish_input[i]);
-    
-    always_ff @(posedge clk)
     begin
-      if(reset)
-        begin
-          count[i] <= 0;
-          finish_input[i] <= 1'b0;
-        end
-      else
-        begin
-          if(test_stim_ready_out[i])
-            count[i] <= count[i] + 1;
+      assign test_input_ready[i][P] = 1'b1;
+      assign test_stim_data_in[i] = {(width_lp-lg_node_x_lp-lg_node_x_lp)'(i)
+                                     ,((lg_node_x_lp+lg_node_y_lp)'(i))^count[i]
+                                     };
+      assign test_stim_ts_in[i] = global_ts;
+      assign test_stim_valid_in[i] = ~(finish_input[i]);
 
-          if(count[i] == msize_lp-1)
-            finish_input[i] <= 1'b1;
+      always_ff @(posedge clk)
+        begin
+          if(reset)
+            begin
+              count[i]     <= 0;
+              finish_input <= 1'b0;
+            end
+          else
+            begin
+              if(test_stim_ready_out[i])
+                count[i] <= count[i] + 1;
+
+              if(count[i] == msize_lp-1)
+                finish_input[i] <= 1'b1;
+            end
         end
     end
-  end
-  
+
+  always_ff @(posedge clk)
+    begin
+      global_ts <= global_ts + 1;
+      if (reset)
+        global_ts <= 0;
+    end
 
 
   /**************************************************

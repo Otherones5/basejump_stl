@@ -11,9 +11,9 @@
 TOP = ../../..
 
 # place the parameters you want to scan here.
-BSG_TESTME_FILES    = bsg_mesh_router.v
+BSG_TESTME_FILES    = bsg_mesh_router_age_arb.v
 BSG_TESTME_DIR      = $(TOP)/bsg_noc
-BSG_MISC_FILES      = bsg_defines.v bsg_mux_one_hot.v bsg_encode_one_hot.v bsg_circular_ptr.v bsg_round_robin_arb.v bsg_cycle_counter.v 
+BSG_MISC_FILES      = bsg_age_arb.v bsg_defines.v bsg_mux_one_hot.v bsg_encode_one_hot.v bsg_circular_ptr.v bsg_cycle_counter.v 
 BSG_ASYNC_FILES     =
 BSG_COMM_LINK_FILES =
 BSG_DATAFLOW_FILES  = bsg_fifo_1r1w_small.v bsg_fifo_1r1w_small_unhardened.v bsg_fifo_tracker.v
