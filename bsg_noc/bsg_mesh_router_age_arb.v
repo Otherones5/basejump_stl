@@ -153,10 +153,10 @@ module bsg_mesh_router_age_arb #( parameter dirs_p=5
                ) east_a_arb
     (.clk_i
     ,.reset_i
-    ,.ready_i(ready_i[W])
+    ,.ready_i(ready_i[E])
     ,.ts_i({ts_i[W], ts_i[P]})
     ,.reqs_i({req[W][E], req[P][E]})
-    ,.grants_o({W_gnt_e, W_gnt_p})
+    ,.grants_o({E_gnt_w, E_gnt_p})
     );
 
   bsg_age_arb #(.inputs_p(4)
@@ -186,7 +186,7 @@ module bsg_mesh_router_age_arb #( parameter dirs_p=5
                ) proc_a_arb
     (.clk_i
     ,.reset_i
-    ,.ready_i(ready_i[S])
+    ,.ready_i(ready_i[P])
     ,.ts_i({ts_i[S], ts_i[N], ts_i[E], ts_i[W], ts_i[P]})
     ,.reqs_i({req[S][P], req[N][P], req[E][P], req[W][P], req[P][P]})
     ,.grants_o({ P_gnt_s, P_gnt_n, P_gnt_e, P_gnt_w, P_gnt_p })
