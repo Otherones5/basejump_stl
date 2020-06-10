@@ -30,7 +30,7 @@ module bsg_age_arb #( parameter inputs_p = "not assigned"
           4'b1_10_?: grants_o = 2'b10;
           4'b1_11_1: grants_o = 2'b01;
           4'b1_11_0: grants_o = 2'b10;
-          4'b?_??_?:
+          default:
             begin
               $display("error: %b", {ready_i, reqs_i, cmp});
               grants_o = 2'b00;
@@ -42,7 +42,7 @@ module bsg_age_arb #( parameter inputs_p = "not assigned"
     always_comb
       begin
         logic [2:0] cmp;
-        assign cmp = {ts_i[0] < ts_i[1], ts_i[0] < ts_i[2], ts_i[1] < ts_i[2]};
+        assign cmp = {ts_i[1] < ts_i[2], ts_i[0] < ts_i[2], ts_i[0] < ts_i[1]};
 
         unique casez({ready_i, reqs_i, cmp})
           7'b0_???_???: grants_o = 3'b000;
@@ -59,7 +59,7 @@ module bsg_age_arb #( parameter inputs_p = "not assigned"
           7'b1_111_?11: grants_o = 3'b001;
           7'b1_111_1?0: grants_o = 3'b010;
           7'b1_111_00?: grants_o = 3'b100;
-          7'b?_???_???:
+          default:
             begin
               $display("error: %b", {ready_i, reqs_i, cmp});
               grants_o = 3'b000;
@@ -71,9 +71,9 @@ module bsg_age_arb #( parameter inputs_p = "not assigned"
     always_comb
       begin
         logic [5:0] cmp;
-        assign cmp = {ts_i[0] < ts_i[1], ts_i[0] < ts_i[2], ts_i[0] < ts_i[3],
-                      ts_i[1] < ts_i[2], ts_i[1] < ts_i[3],
-                      ts_i[2] < ts_i[3]};
+        assign cmp = {ts_i[2] < ts_i[3],
+                      ts_i[1] < ts_i[3], ts_i[1] < ts_i[2],
+                      ts_i[0] < ts_i[3], ts_i[0] < ts_i[2], ts_i[0] < ts_i[1]};
 
         unique casez({ready_i, reqs_i, cmp})
           11'b0_????_??????: grants_o = 4'b0000;
@@ -110,7 +110,7 @@ module bsg_age_arb #( parameter inputs_p = "not assigned"
           11'b1_1111_?11??0: grants_o = 4'b0010;
           11'b1_1111_1?0?0?: grants_o = 4'b0100;
           11'b1_1111_00?0??: grants_o = 4'b1000;
-          11'b?_????_??????:
+          default:
             begin
               $display("error: %b", {ready_i, reqs_i, cmp});
               grants_o = 4'b0000;
@@ -122,11 +122,11 @@ module bsg_age_arb #( parameter inputs_p = "not assigned"
     always_comb
       begin
         logic [9:0] cmp;
-        assign cmp = {ts_i[0] < ts_i[1], ts_i[0] < ts_i[2], ts_i[0] < ts_i[3],
-                      ts_i[0] < ts_i[4],
-                      ts_i[1] < ts_i[2], ts_i[1] < ts_i[3], ts_i[1] < ts_i[4],
-                      ts_i[2] < ts_i[3], ts_i[2] < ts_i[4],
-                      ts_i[3] < ts_i[4]};
+        assign cmp  = {ts_i[3] < ts_i[4],
+                       ts_i[2] < ts_i[4], ts_i[2] < ts_i[3],
+                       ts_i[1] < ts_i[4], ts_i[1] < ts_i[3], ts_i[1] < ts_i[2],
+                       ts_i[0] < ts_i[4], ts_i[0] < ts_i[3], ts_i[0] < ts_i[2],
+                       ts_i[0] < ts_i[1]};
 
         unique casez({ready_i, reqs_i, cmp})
           16'b0_?????_??????????: grants_o = 5'b00000;
@@ -211,7 +211,7 @@ module bsg_age_arb #( parameter inputs_p = "not assigned"
           16'b1_11111_?11??0??0?: grants_o = 5'b00100;
           16'b1_11111_1?0?0??0??: grants_o = 5'b01000;
           16'b1_11111_00?0??0???: grants_o = 5'b10000;
-          16'b?_?????_??????????:
+          default:
             begin
               $display("error: %b", {ready_i, reqs_i, cmp});
               grants_o = 5'b00000;
