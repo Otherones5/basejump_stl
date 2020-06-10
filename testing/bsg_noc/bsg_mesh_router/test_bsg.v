@@ -1,4 +1,4 @@
-`define DATA_WIDTH_P 4
+`define DATA_WIDTH_P 6
 `define TS_WIDTH_P   6
 `define MESH_EDGE_P  2 // tests a 2^(MESH_EDGE_P) x 2^(MESH_EDGE_P) mesh network
 
@@ -354,10 +354,13 @@ module test_bsg
   
   for(i=0; i<msize_lp; i=i+1)
     begin
-      assign test_input_ready[i][P] = 1'b1;
-      assign test_stim_data_in[i] = {(width_lp-lg_node_x_lp-lg_node_x_lp)'(i)
-                                     ,((lg_node_x_lp+lg_node_y_lp)'(i))^count[i]
-                                     };
+      assign test_input_ready[i][P]  = 1'b1;
+      assign test_stim_data_in[i]  = {global_ts
+                                      ,((lg_node_x_lp+lg_node_y_lp)'(i))^count[i]
+                                      };
+      // assign test_stim_data_in[i] = {(width_lp-lg_node_x_lp-lg_node_x_lp)'(i)
+      //                                ,((lg_node_x_lp+lg_node_y_lp)'(i))^count[i]
+      //                                };
       assign test_stim_ts_in[i] = global_ts;
       assign test_stim_valid_in[i] = ~(finish_input[i]);
 
@@ -408,9 +411,9 @@ module test_bsg
       else
         if(test_output_valid[i][P] & (~finish[i]))
           begin
-            $display(  "tile # %0d receiving packet: %b"
+            $display(  "tile # %0d receiving packet after %d cycles."
                      , i
-                     , test_output_data[i][P]
+                     , global_ts - test_output_data[i][P][width_lp - 1:(lg_node_x_lp+lg_node_y_lp)]
                     );
             test_output_data_r[i] <= test_output_data[i][P];
             
