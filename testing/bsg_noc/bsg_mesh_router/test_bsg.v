@@ -92,15 +92,15 @@ module test_bsg
     bsg_mesh_router_age_arb #( .dirs_p     (dirs_lp)
                               ,.width_p    (width_lp)
                               ,.ts_width_p (ts_width_lp)
-                              ,.lg_node_x_p(lg_node_x_lp)
-                              ,.lg_node_y_p(lg_node_y_lp)
+                              ,.x_cord_width_p(lg_node_x_lp)
+                              ,.y_cord_width_p(lg_node_y_lp)
                               ) uut
                      ( .clk_i  (clk)
                       ,.reset_i(reset)
                       
                       ,.data_i (test_input_data[i])
                       ,.ts_i   (test_input_ts[i])
-                      ,.valid_i(test_input_valid[i])
+                      ,.v_i(test_input_valid[i])
                       ,.yumi_o (test_output_yumi[i])
 
                       ,.data_o (test_output_data[i])
