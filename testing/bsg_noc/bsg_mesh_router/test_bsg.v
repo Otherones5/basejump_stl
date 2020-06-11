@@ -39,7 +39,7 @@ module test_bsg;
                           );
     
   bsg_nonsynth_reset_gen #(  .num_clocks_p     (1)
-                           , .reset_cycles_lo_p(1)
+                           , .reset_cycles_lo_p(0)
                            , .reset_cycles_hi_p(5)
                           )  reset_gen
                           (  .clk_i        (clk) 
@@ -84,26 +84,27 @@ module test_bsg;
   
   genvar i, j; 
   
-  for(i=0; i<msize_lp; i=i+1)
-    bsg_mesh_router #( .dirs_p     (dirs_lp)
-                      ,.width_p    (width_lp)
-                      ,.lg_node_x_p(lg_node_x_lp)
-                      ,.lg_node_y_p(lg_node_y_lp)
-                     ) uut
-                     ( .clk_i  (clk)
-                      ,.reset_i(reset)
-                      
-                      ,.data_i (test_input_data[i])
-                      ,.valid_i(test_input_valid[i])
-                      ,.yumi_o (test_output_yumi[i])
+  for(i=0; i<msize_lp; i=i+1)                  
+    bsg_mesh_router
+   #(.dirs_lp       (dirs_lp)
+    ,.width_p       (width_lp)
+    ,.x_cord_width_p(lg_node_x_lp)
+    ,.y_cord_width_p(lg_node_y_lp)
+    ) uut
+    (.clk_i  (clk)
+    ,.reset_i(reset)
 
-                      ,.data_o (test_output_data[i])
-                      ,.valid_o(test_output_valid[i])
-                      ,.ready_i(test_input_ready[i])
+    ,.data_i (test_input_data[i])
+    ,.v_i    (test_input_valid[i])
+    ,.yumi_o (test_output_yumi[i])
 
-                      ,.my_x_i(lg_node_x_lp'(i%medge_lp))
-                      ,.my_y_i(lg_node_y_lp'(i/medge_lp))
-                     );
+    ,.ready_i(test_input_ready[i])
+    ,.data_o (test_output_data[i])
+    ,.v_o    (test_output_valid[i])
+
+    ,.my_x_i(lg_node_x_lp'(i%medge_lp))
+    ,.my_y_i(lg_node_y_lp'(i/medge_lp))
+    );
 
   // disables the peripheral ports of the mesh
   for(i=0; i<msize_lp; i=i+1)
@@ -265,7 +266,7 @@ module test_bsg;
       if(reset)
         begin
           count[i] <= 0;
-          finish_input <= 1'b0;
+          finish_input[i] <= 1'b0;
         end
       else
         begin
@@ -305,7 +306,7 @@ module test_bsg;
                      , i
                      , test_output_data[i][P]
                     );
-            test_output_data_r <= test_output_data[i][P];
+            test_output_data_r[i] <= test_output_data[i][P];
             
             assert(test_output_data[i][P][0+:(lg_node_x_lp+lg_node_y_lp)] == i)
               else $error("received at tile: %0d, should go to tile: %0d"
@@ -313,7 +314,7 @@ module test_bsg;
                           ,test_output_data[i][P][0+:(lg_node_x_lp+lg_node_y_lp)]
                          );
 
-            assert((test_output_data_r!=test_output_data[i][P]) | output_count[i]==0)
+            assert((test_output_data_r[i]!=test_output_data[i][P]) | output_count[i]==0)
               else $error("packet received at tile %d is not unique", i);
 
             output_count[i] <= output_count[i] + 1;
