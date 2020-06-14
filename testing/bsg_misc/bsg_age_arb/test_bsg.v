@@ -45,7 +45,7 @@ module test_bsg
 
   logic test_input_ready;
   logic [inputs_lp-1:0] test_input_reqs, test_output_grants;
-  logic [inputs-lp-1:0] ts; 
+  logic [inputs_lp-1:0] ts; 
   logic finish_r;
   logic [`BSG_SAFE_CLOG2(2*inputs_lp+1)-1:0] grant_count [inputs_lp-1:0];
   logic [`BSG_SAFE_CLOG2(2*inputs_lp)-1:0] count;
@@ -61,7 +61,7 @@ module test_bsg
     if(reset)
       begin
         test_input_reqs  <= (inputs_lp)'(0);
-        test_input_ready <= 1'b1;
+	test_input_ready <= 1'b1;
         count            <= 0;
         finish_r         <= 1'b0;
       end
@@ -92,7 +92,7 @@ module test_bsg
                         ,.reset_i (reset)
 
                         ,.ready_i (test_input_ready)
-			,.ts_i(timestamps)
+			,.ts_i (ts)
                         ,.reqs_i  (test_input_reqs)
                         ,.grants_o(test_output_grants)
                        );
@@ -116,7 +116,6 @@ module test_bsg
         begin
           if(test_output_grants[i])
             grant_count[i] <= grant_count[i] + 1;
-	    ts[i] <= ts[i] + 1;
         end
 
         if(!(|count) && !test_input_ready)
