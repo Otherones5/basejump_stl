@@ -411,9 +411,8 @@ module test_bsg
       else
         if(test_output_valid[i][P] & (~finish[i]))
           begin
-            $display(  "tile # %0d receiving packet %b after %d cycles."
+            $display(  "tile # %0d receiving packet after %d cycles."
                      , i
-                     , test_output_data[i][P]
                      , global_ts - test_output_data[i][P][width_lp - 1:(lg_node_x_lp+lg_node_y_lp)]
                     );
             test_output_data_r[i] <= test_output_data[i][P];
