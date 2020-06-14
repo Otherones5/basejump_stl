@@ -45,7 +45,7 @@ module test_bsg
 
   logic test_input_ready;
   logic [inputs_lp-1:0] test_input_reqs, test_output_grants;
-  
+  logic [inputs-lp-1:0] ts; 
   logic finish_r;
   logic [`BSG_SAFE_CLOG2(2*inputs_lp+1)-1:0] grant_count [inputs_lp-1:0];
   logic [`BSG_SAFE_CLOG2(2*inputs_lp)-1:0] count;
@@ -86,21 +86,17 @@ module test_bsg
 
    wire v;
   
-  bsg_round_robin_arb #(.inputs_p(inputs_lp)
+  bsg_age_arb #(.inputs_p(inputs_lp)
                        ) UUT
                        ( .clk_i   (clk)
                         ,.reset_i (reset)
 
-                        ,.grants_en_i (test_input_ready)
-
+                        ,.ready_i (test_input_ready)
+			,.ts_i(timestamps)
                         ,.reqs_i  (test_input_reqs)
                         ,.grants_o(test_output_grants)
-                        ,.sel_one_hot_o()
-		        
-                        ,.v_o   (v)
-			,.tag_o ( )
-		        ,.yumi_i(v)
                        );
+
   // calculates the no. of requests
   logic [`BSG_SAFE_CLOG2(inputs_lp+1)-1:0] reqs_popcount;
   bsg_popcount #(.width_p(inputs_lp)
@@ -120,6 +116,7 @@ module test_bsg
         begin
           if(test_output_grants[i])
             grant_count[i] <= grant_count[i] + 1;
+	    ts[i] <= ts[i] + 1;
         end
 
         if(!(|count) && !test_input_ready)

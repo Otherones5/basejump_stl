@@ -11,7 +11,7 @@
 TOP = ../../..
 
 # place the parameters you want to scan here.
-BSG_TESTME_FILES    =   bsg_round_robin_arb.v
+BSG_TESTME_FILES    =   bsg_age_arb.v
 BSG_TESTME_DIR      =   $(TOP)/bsg_misc
 BSG_MISC_FILES      =   bsg_defines.v bsg_encode_one_hot.v bsg_popcount.v
 BSG_ASYNC_FILES     = 
