@@ -16,7 +16,8 @@
   a power of 2 and a non power of 2. 
 ********************************************************/
 
-module test_bsg;
+module test_bsg
+    (input i_clk);
   
   localparam cycle_time_lp = 20; 
   localparam inputs_lp     = `INPUTS_P;
@@ -24,10 +25,8 @@ module test_bsg;
   // Clock and reset generation
   wire clk;
   wire reset;
-  bsg_nonsynth_clock_gen #(  .cycle_time_p(cycle_time_lp)
-						  )  clock_gen
-						  (  .o(clk)
-						  );
+
+  assign clk = i_clk;
   bsg_nonsynth_reset_gen #(  .num_clocks_p     (1)
 						   , .reset_cycles_lo_p(1)
 						   , .reset_cycles_hi_p(5)
@@ -54,11 +53,11 @@ module test_bsg;
   // test input generation
   always_ff @(posedge clk)
   begin
-    $display("count: %d", count
+    /*$display("count: %d", count
              , " | ready: %b", test_input_ready
              , " | test_reqs: %b", test_input_reqs
              , " | grant_count: %p", grant_count
-             , " | reqs_popcount: %d", reqs_popcount);
+             , " | reqs_popcount: %d", reqs_popcount);*/
     if(reset)
       begin
         test_input_reqs  <= (inputs_lp)'(0);
@@ -85,15 +84,23 @@ module test_bsg;
       end
   end
 
+   wire v;
+  
   bsg_round_robin_arb #(.inputs_p(inputs_lp)
                        ) UUT
                        ( .clk_i   (clk)
                         ,.reset_i (reset)
-                        ,.ready_i (test_input_ready)
+
+                        ,.grants_en_i (test_input_ready)
+
                         ,.reqs_i  (test_input_reqs)
                         ,.grants_o(test_output_grants)
+                        ,.sel_one_hot_o()
+		        
+                        ,.v_o   (v)
+			,.tag_o ( )
+		        ,.yumi_i(v)
                        );
-
   // calculates the no. of requests
   logic [`BSG_SAFE_CLOG2(inputs_lp+1)-1:0] reqs_popcount;
   bsg_popcount #(.width_p(inputs_lp)

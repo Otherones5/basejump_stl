@@ -43,7 +43,7 @@ OTHER_P  = 1
 
 
 ############################# SIMULATOR COMMANDS ###########################
-BSG_IP_CORES_COMP = vlog -sv -mfcu -work $(TOP)/work $(ALL_FILES) -quiet
+BSG_IP_CORES_COMP = verilator --cc $(ALL_FILES) --top-module test_bsg -I../../../bsg_mic -I../../../bsg_test --Wno-fatal
 BSG_IP_CORES_SIM  = vsim -batch -lib $(TOP)/work $(TEST_MODULE) -do "run -all; quit -f"
 ############################################################################
 
@@ -81,8 +81,7 @@ all: initial testme_gen $(foreach x,$(commands),run.$(x))
 # command line options
 
 run.%:
-	$(BSG_IP_CORES_COMP) $(subst @, ,$*)
-	$(BSG_IP_CORES_SIM) >> outfile
+	$(BSG_IP_CORES_COMP)
 
 testme_gen:
 	python $(BSG_TESTME_DIR)/bsg_round_robin_arb.py 10 > $(BSG_TESTME_DIR)/bsg_round_robin_arb.v

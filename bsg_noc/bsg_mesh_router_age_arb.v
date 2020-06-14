@@ -10,17 +10,17 @@ import bsg_noc_pkg::Dirs
 // Dimension ordered routing decoder
 // based on X then Y routing, it outputs a set of grant signals
 
-module bsg_mesh_router_dor_decoder #( parameter lg_node_x_p = -1
-                                     ,parameter lg_node_y_p = -1
-                                     ,parameter dirs_p = 5
+module bsg_mesh_router_dor_decoder #( parameter x_cord_width_p = -1
+                                     ,parameter y_cord_width_p = -1
+                                     ,parameter dirs_lp = 5
                                     )
- ( input [dirs_p-1:0] valid_i
+ ( input [dirs_p-1:0] v_i
 
-  ,input [dirs_p-1:0][lg_node_x_p-1:0] x_dirs_i
-  ,input [dirs_p-1:0][lg_node_y_p-1:0] y_dirs_i
+  ,input [dirs_p-1:0][x_cord_width_p-1:0] x_dirs_i
+  ,input [dirs_p-1:0][y_cord_width_p-1:0] y_dirs_i
 
-  ,input [lg_node_x_p-1:0] my_x_i
-  ,input [lg_node_x_p-1:0] my_y_i
+  ,input [x_cord_width_p-1:0] my_x_i
+  ,input [x_cord_width_p-1:0] my_y_i
 
   ,output [dirs_p-1:0][dirs_p-1:0] req_o
  );
@@ -46,35 +46,35 @@ module bsg_mesh_router_dor_decoder #( parameter lg_node_x_p = -1
 
   for (i = W; i <= E; i=i+1)
   begin: WE_req
-    assign req_o[i][(i==W) ? E : W] = valid_i[i] &  ~x_eq[i];
-    assign req_o[i][P] = valid_i[i] & x_eq[i] & y_eq[i];
-    assign req_o[i][S] = valid_i[i] & x_eq[i] & y_gt[i];
-    assign req_o[i][N] = valid_i[i] & x_eq[i] & ~y_gt[i] & ~y_eq[i];
+    assign req_o[i][(i==W) ? E : W] = v_i[i] &  ~x_eq[i];
+    assign req_o[i][P] = v_i[i] & x_eq[i] & y_eq[i];
+    assign req_o[i][S] = v_i[i] & x_eq[i] & y_gt[i];
+    assign req_o[i][N] = v_i[i] & x_eq[i] & ~y_gt[i] & ~y_eq[i];
     assign req_o[i][(i==W) ? W:E] = 1'b0;
   end
 
   for (i = N; i <=S; i=i+1)
   begin: NS_req
-    assign req_o[i][(i==N) ? S : N] =  valid_i[i] & ~y_eq[i];
-    assign req_o[i][P] =  valid_i[i] & y_eq[i];
+    assign req_o[i][(i==N) ? S : N] =  v_i[i] & ~y_eq[i];
+    assign req_o[i][P] =  v_i[i] & y_eq[i];
     assign req_o[i][E] = 1'b0;
     assign req_o[i][W] = 1'b0;
     assign req_o[i][(i==N) ? N : S] = 1'b0;
   end
 
-  assign req_o[P][E]  =  valid_i[P] & x_gt [P];
-  assign req_o[P][W]  =  valid_i[P] & !(x_eq[P] | x_gt[P]);
-  assign req_o[P][S]  =  valid_i[P] & x_eq[P] & y_gt  [P];
-  assign req_o[P][N]  =  valid_i[P] & x_eq[P] & ~y_gt[P] & ~y_eq[P];
-  assign req_o[P][P]  =  valid_i[P] & x_eq[P] & y_eq [P];
+  assign req_o[P][E]  =  v_i[P] & x_gt [P];
+  assign req_o[P][W]  =  v_i[P] & !(x_eq[P] | x_gt[P]);
+  assign req_o[P][S]  =  v_i[P] & x_eq[P] & y_gt  [P];
+  assign req_o[P][N]  =  v_i[P] & x_eq[P] & ~y_gt[P] & ~y_eq[P];
+  assign req_o[P][P]  =  v_i[P] & x_eq[P] & y_eq [P];
  
 endmodule
 
 module bsg_mesh_router_age_arb #( parameter dirs_p=5
                                  ,parameter width_p=-1
                                  ,parameter ts_width_p=-1
-                                 ,parameter lg_node_x_p=-1
-                                 ,parameter lg_node_y_p=-1
+                                 ,parameter x_cord_width_p=-1
+                                 ,parameter y_cord_width_p=-1
                                  )
  ( input clk_i
   ,input reset_i
@@ -83,7 +83,7 @@ module bsg_mesh_router_age_arb #( parameter dirs_p=5
 
   ,input   [dirs_p-1:0] [width_p-1:0] data_i  // from input twofer
   ,input   [dirs_p-1:0] [ts_width_p-1:0] ts_i
-  ,input   [dirs_p-1:0]               valid_i // from input twofer
+  ,input   [dirs_p-1:0]               v_i // from input twofer
   ,output  logic [dirs_p-1:0]         yumi_o  // to input twofer
 
   ,input   [dirs_p-1:0]               ready_i // from output twofer
@@ -91,29 +91,28 @@ module bsg_mesh_router_age_arb #( parameter dirs_p=5
   ,output  [dirs_p-1:0] [ts_width_p-1:0] ts_o
   ,output  logic [dirs_p-1:0]         valid_o // to output twofer
 
-
-  ,input   [lg_node_x_p-1:0] my_x_i           // node's x and y coord
-  ,input   [lg_node_y_p-1:0] my_y_i
+  ,input   [x_cord_width_p-1:0] my_x_i           // node's x and y coord
+  ,input   [y_cord_width_p-1:0] my_y_i
  );
 
-  wire [dirs_p-1:0][lg_node_x_p-1:0] x_dirs;
-  wire [dirs_p-1:0][lg_node_y_p-1:0] y_dirs;
+  wire [dirs_p-1:0][x_cord_width_p-1:0] x_dirs;
+  wire [dirs_p-1:0][y_cord_width_p-1:0] y_dirs;
 
   genvar i;
 
   for (i = 0; i < dirs_p; i=i+1)
   begin: reshape
-     assign x_dirs[i] = data_i[i][0+:lg_node_x_p];
-     assign y_dirs[i] = data_i[i][lg_node_x_p+:lg_node_y_p];
+     assign x_dirs[i] = data_i[i][0+:x_cord_width_p];
+     assign y_dirs[i] = data_i[i][x_cord_width_p+:y_cord_width_p];
   end
 
   wire [dirs_p-1:0][dirs_p-1:0] req;
 
-  bsg_mesh_router_dor_decoder  #( .lg_node_x_p(lg_node_x_p)
-                                 ,.lg_node_y_p(lg_node_y_p)
-                                 ,.dirs_p     (dirs_p)
+  bsg_mesh_router_dor_decoder  #( .x_cord_width_p(x_cord_width_p)
+                                 ,.y_cord_width_p(y_cord_width_p)
+                                 ,.dirs_lp     (dirs_p)
                                 ) dor_decoder
-                                ( .valid_i
+                                ( .v_i
                                  ,.my_x_i, .my_y_i 
                                  ,.x_dirs_i(x_dirs), .y_dirs_i(y_dirs)
                                  ,.req_o(req) 

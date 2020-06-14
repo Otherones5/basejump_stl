@@ -56,7 +56,7 @@ module bsg_rr_f2f_input #(parameter   width_p              = "inv"
     , output [num_in_p-1:0] yumi_o
     );
 
-   logic [`BSG_SAFE_CLOG2(num_in_p)-1:0] iptr_r;
+   logic [`BSG_SAFE_CLOG2(num_in_p)-1:0] iptr_r, iptr_r_data;
 
    wire [width_p*num_in_p-1:0]      data_i_flat = ({ >> {data_i} });
    wire [width_p*middle_meet_p-1:0] data_head_o_flat;
@@ -69,10 +69,12 @@ module bsg_rr_f2f_input #(parameter   width_p              = "inv"
    bm2Da (.i(data_head_o_flat), .o(data_head_o));
 
    // rotate the valid and data vectors from incoming channel
-   wire [num_in_p*2-1:0] valid_head_o_pretrunc = ({ valid_i, valid_i } >>  iptr_r);
+   wire [num_in_p-1:0] 		    valid_head_o_pretrunc;
+
+   bsg_rotate_right #(.width_p(num_in_p)) valid_rr (.data_i(valid_i), .rot_i(iptr_r), .o(valid_head_o_pretrunc));
 
    wire [2*width_p*num_in_p-1:0] data_head_o_flat_pretrunc
-                                 =  { 2 { data_i_flat } } >> (iptr_r*width_p);
+                                 =  { 2 { data_i_flat } } >> (iptr_r_data*width_p);
 
    wire [num_in_p*2-1:0]         yumi_intermediate;
 
@@ -98,6 +100,17 @@ module bsg_rr_f2f_input #(parameter   width_p              = "inv"
      (.reset_i(reset), .clk(clk)
       ,.add_i(go_cnt_i)
       ,.o(iptr_r)
+      ,.n_o()
+      );
+
+   // we duplicate this logic for physical design because control and data do not always belong together
+   bsg_circular_ptr #(.slots_p(num_in_p)
+                      ,.max_add_p(min_in_middle_meet_p)
+                      ) c_ptr_data
+     (.reset_i(reset), .clk(clk)
+      ,.add_i(go_cnt_i)
+      ,.o(iptr_r_data)
+      ,.n_o()
       );
 
 endmodule // bsg_rr_f2f_input
@@ -141,9 +154,14 @@ module bsg_rr_f2f_output #(parameter width_p="inv"
     , output [width_p-1:0]     data_o [num_out_p-1:0]
     );
 
-   logic [`BSG_SAFE_CLOG2(num_out_p)-1:0] optr_r;
+   logic [`BSG_SAFE_CLOG2(num_out_p)-1:0] optr_r, optr_r_data;
 
-   wire [num_out_p*2-1:0]    ready_head_o_pretr = { 2 { ready_i } } >> optr_r;
+   // instantiate module so we can cluster this logic in physical design
+   // wire [num_out_p*2-1:0] 		  ready_head_o_pretr = { 2 { ready_i } } >> optr_r;
+
+   wire [num_out_p-1:0] 		  ready_head_o_pretr;
+   bsg_rotate_right #(.width_p(num_out_p)) ready_rr (.data_i(ready_i), .rot_i(optr_r), .o(ready_head_o_pretr));
+
    wire [num_out_p*2-1:0]    valid_pretr;
 
    if (num_out_p >= middle_meet_p)
@@ -174,7 +192,7 @@ module bsg_rr_f2f_output #(parameter width_p="inv"
              assign data_head_double[i]            = width_p ' (0);
              assign data_head_double[i+num_out_p]  = width_p ' (0);
           end
-        assign data_o[i] = data_head_double[(i+num_out_p)-optr_r];
+        assign data_o[i] = data_head_double[(i+num_out_p)-optr_r_data];
      end
 
    bsg_circular_ptr #(.slots_p(num_out_p)
@@ -183,6 +201,18 @@ module bsg_rr_f2f_output #(parameter width_p="inv"
      (.clk(clk), .reset_i(reset)
       ,.add_i(go_cnt_i)
       ,.o(optr_r)
+      ,.n_o()
+      );
+
+
+   // duplicate logic for physical design
+   bsg_circular_ptr #(.slots_p(num_out_p)
+                      ,.max_add_p(min_out_middle_meet_lp)
+                      ) c_ptr_data
+     (.clk(clk), .reset_i(reset)
+      ,.add_i(go_cnt_i)
+      ,.o(optr_r_data)
+      ,.n_o()
       );
 
 
@@ -352,10 +382,14 @@ module bsg_round_robin_fifo_to_fifo
                 , .yumi_o(yumi_int_o[i][i:0])                 // final output
                 );
 
+	     // MBT: this is redundant with the cast inside bsg_rr_f2f_input
+	     // and results in a synthesis warning
+	     /*
              for (j = i+1; j < middle_meet_lp; j=j+1)
 	       begin
                   assign valid_head[i][j] = 1'b0;
 	       end
+	      */
 
              for (j = i+1; j < num_in_p; j=j+1)
 	       begin

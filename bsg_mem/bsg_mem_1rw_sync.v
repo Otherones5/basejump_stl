@@ -5,8 +5,11 @@
 //
 
 module bsg_mem_1rw_sync #(parameter width_p=-1
-			  , parameter els_p=-1
-			  , parameter addr_width_lp=`BSG_SAFE_CLOG2(els_p))
+                          , parameter els_p=-1
+                          , parameter latch_last_read_p=0
+                          , parameter addr_width_lp=`BSG_SAFE_CLOG2(els_p)
+                          , parameter enable_clock_gating_p=0
+                          )
    (input   clk_i
     , input reset_i
     , input [width_p-1:0] data_i
@@ -16,21 +19,34 @@ module bsg_mem_1rw_sync #(parameter width_p=-1
     , output logic [width_p-1:0]  data_o
     );
 
-   wire unused = reset_i;
-   
-   logic [els_p-1:0][width_p-1:0]    mem;
+   wire clk_lo;
 
-   always_ff @(posedge clk_i)
-     if (v_i)
-       begin
-          // synopsys translate off
-          assert (addr_i < els_p)
-            else $error("Invalid address %x to %m of size %x\n", addr_i, els_p);
-          // synopsys translate on
-          if (w_i)
-            mem[addr_i] <= data_i;
-          else
-            data_o      <= mem[addr_i];
-       end
+   if (enable_clock_gating_p)
+     begin
+       bsg_clkgate_optional icg
+         (.clk_i( clk_i )
+         ,.en_i( v_i )
+         ,.bypass_i( 1'b0 )
+         ,.gated_clock_o( clk_lo )
+         );
+     end
+   else
+     begin
+       assign clk_lo = clk_i;
+     end
+
+   bsg_mem_1rw_sync_synth
+     #(.width_p(width_p)
+       ,.els_p(els_p)
+       ,.latch_last_read_p(latch_last_read_p)
+       ) synth
+    (.clk_i( clk_lo )
+    ,.reset_i
+    ,.data_i
+    ,.addr_i
+    ,.v_i
+    ,.w_i
+    ,.data_o
+    );
 
 endmodule

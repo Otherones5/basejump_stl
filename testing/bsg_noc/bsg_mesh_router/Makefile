@@ -16,11 +16,11 @@ BSG_TESTME_DIR      = $(TOP)/bsg_noc
 BSG_MISC_FILES      = bsg_age_arb.v bsg_defines.v bsg_mux_one_hot.v bsg_encode_one_hot.v bsg_circular_ptr.v bsg_cycle_counter.v 
 BSG_ASYNC_FILES     =
 BSG_COMM_LINK_FILES =
-BSG_DATAFLOW_FILES  = bsg_fifo_1r1w_small.v
+BSG_DATAFLOW_FILES  = bsg_fifo_1r1w_small.v bsg_fifo_1r1w_small_unhardened.v bsg_fifo_tracker.v
 BSG_FSB_FILES       =
 BSG_GUTS_FILES      =
-BSG_NOC_FILES       = bsg_noc_pkg.v
-BSG_MEM_FILES       = bsg_mem_1r1w.v
+BSG_NOC_FILES       = bsg_noc_pkg.v bsg_mesh_router.v
+BSG_MEM_FILES       = bsg_mem_1r1w.v bsg_mem_1r1w_synth.v
 
 BSG_TEST_FILES =  bsg_nonsynth_reset_gen.v \
                   bsg_nonsynth_clock_gen.v \
@@ -45,7 +45,7 @@ MESH_EDGE_P  = 0 1 2
 
 
 ############################# SIMULATOR COMMANDS ###########################
-BSG_IP_CORES_COMP = verilator --cc $(ALL_FILES) -I../../../bsg_noc -I../../../bsg_misc -I../../../bsg_mem -I../../../bsg_test --top-module test_bsg -Wno-fatal
+BSG_IP_CORES_COMP = verilator --cc $(ALL_FILES) -I../../../bsg_noc -I../../../bsg_misc -I../../../bsg_mem -I../../../bsg_test --top-module test_bsg -Wno-fatal -Wno-MODDUP
 BSG_IP_CORES_SIM  = vsim -batch $(TEST_MODULE) -do "run -all; quit -f"
 ############################################################################
 
@@ -87,8 +87,6 @@ all: initial $(foreach x,$(commands),run.$(x))
 
 run.%:
 	$(BSG_IP_CORES_COMP)
-#	$(BSG_IP_CORES_SIM) >> outfile
-# $(subst @, ,$*)
 
 initial:
 	rm -f outfile
