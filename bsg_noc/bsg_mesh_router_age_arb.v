@@ -91,7 +91,6 @@ module bsg_mesh_router_age_arb #( parameter dirs_p=5
   ,output  [dirs_p-1:0] [ts_width_p-1:0] ts_o
   ,output  logic [dirs_p-1:0]         valid_o // to output twofer
 
-
   ,input   [x_cord_width_p-1:0] my_x_i           // node's x and y coord
   ,input   [y_cord_width_p-1:0] my_y_i
  );
