@@ -30,10 +30,12 @@ module bsg_serial_in_parallel_out #(parameter   width_p   = -1
     , input  [$clog2(out_els_p+1)-1:0]        yumi_cnt_i
     );
 
+   localparam double_els_lp = els_p * 2;
+
    logic [els_p-1:0][width_p-1:0] data_r, data_nn;
    logic [2*els_p-1:0  ][width_p-1:0] data_n;
    logic [els_p-1:0] 		  valid_r, valid_nn;
-   logic [2*els_p-1:0] 		  valid_n;
+   logic [double_els_lp-1:0] 	  valid_n;
 
    logic [$clog2(els_p+1)-1:0]    num_els_r, num_els_n;
 
@@ -51,38 +53,39 @@ module bsg_serial_in_parallel_out #(parameter   width_p   = -1
           end
      end
 
-   always_ff @(posedge clk_i)
+  always_ff @(posedge clk_i) begin
      data_r <= data_nn;
+  end
 
-//   assign num_els_o = num_els_r;
 
-   // we are ready if we have at least
-   // one spot that is not full
+  // we are ready if we have at least
+  // one spot that is not full
 
-   assign ready_o = ~valid_r[els_p-1];
+  assign ready_o = ~valid_r[els_p-1];
 
-   // update element count
-   assign num_els_n = (num_els_r + (valid_i & ready_o)) - yumi_cnt_i;
+  // update element count
+  assign num_els_n = (num_els_r + (valid_i & ready_o)) - yumi_cnt_i;
 
-   always_comb
-     begin
-        data_n  = data_r;
-        valid_n = (els_p*2) ' (valid_r);
+  always_comb begin
+    data_n  = data_r;
+    valid_n = (double_els_lp) ' (valid_r);
 
-	data_n[els_p+:els_p] = 0;
+	  data_n[els_p+:els_p] = 0;
 
-        // bypass in values
-        data_n [num_els_r] = data_i;
-        valid_n[num_els_r] = valid_i & ready_o;
+    // bypass in values
+    data_n [num_els_r] = data_i;
+    valid_n[num_els_r] = valid_i & ready_o;
 
-        // this temporary value is
-        // the output of this function
-        valid_o = valid_n[out_els_p-1:0];
-        data_o  = data_n [out_els_p-1:0];
+    // this temporary value is
+    // the output of this function
+    valid_o = valid_n[out_els_p-1:0];
+    data_o  = data_n [out_els_p-1:0];
 
-	// now we calculate the update
-	data_nn = data_n[yumi_cnt_i+:els_p];
-	valid_nn = valid_n[yumi_cnt_i+:els_p];
-     end
+	  // now we calculate the update
+	  for (integer i = 0; i < els_p; i++) begin
+	    data_nn[i] = data_n[yumi_cnt_i+i];
+    end
+	  valid_nn = valid_n[yumi_cnt_i+:els_p];
+  end
 
 endmodule

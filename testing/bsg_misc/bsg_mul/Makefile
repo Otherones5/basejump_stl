@@ -11,9 +11,8 @@ VCS_FLAGS =  $(DESIGNWARE_FLAGS) -PP -notice -full64 +lint=all,noVCDE +v2k -sver
 
 TOP = ../../..
 
-MURN_INCLUDE_DIR = $(HOME)/raw/murn/code/include
 DESIGNWARE_DIR = $(SYNOPSYS_DIR)/$(DC_RELEASE)/dw/sim_ver
-DESIGNWARE_FLAGS = -y $(DESIGNWARE_DIR) +incdir+$(DESIGNWARE_DIR) +incdir+$(MURN_INCLUDE_DIR) +incdir+$(TOP)/bsg_test +incdir+$(TOP)/bsg_misc +libext+.v
+DESIGNWARE_FLAGS = -y $(DESIGNWARE_DIR) +incdir+$(DESIGNWARE_DIR) +incdir+$(TOP)/bsg_test +incdir+$(TOP)/bsg_misc +libext+.v
 
 BSG_TESTME_FILES    = bsg_mul.v
 BSG_TESTME_DIR      = $(TOP)/bsg_misc
@@ -37,10 +36,13 @@ ALL_FILES =   $(foreach x,$(BSG_MISC_FILES),$(TOP)/bsg_misc/$(x)) $(foreach x,$(
 
 modulo_val_p = 1 2 3 4 5 6 7 8 9
 #modulo_val_p = 10 11 12 13 14 15 0
-signed_p = 0 1 #x1 0
+signed_p = 0 1
+in_width_p = 16 32
+pipeline_p = 0 1
+
 #signed_p=1
 #scan_params = modulo_val_p signed_p
-scan_params = signed_p
+scan_params = signed_p in_width_p pipeline_p
 bsg_param_scan = $(if $(1),$(foreach v__,$($(firstword $(1))),$(call bsg_param_scan,$(filter-out $(firstword $(1)),$(1)),$(2),$(3),$(4)@$(2)$(firstword $(1))$(3)$(v__))),$(4))
 commands=$(call bsg_param_scan,$(scan_params),+,=)
 
@@ -58,7 +60,7 @@ simv: $(ALL_FILES)
 all.log: $(ALL_FILES)
 	@echo $*
 	- rm -rf simv csrc simv.daidir
-	$(VCS_BIN)/vcs $(DESIGNWARE_FLAGS) -PP -notice -full64 +lint=all,noVCDE +v2k -sverilog -timescale=100ps/10ps $(filter-out small-clean,$^) $(subst @, ,$*) +vcs+loopreport +define+BSG_IP_CORES_UNIT_TEST 
+	$(VCS_BIN)/vcs $(DESIGNWARE_FLAGS) -PP -notice -full64 +lint=all,noVCDE +v2k -sverilog -timescale=100ps/10ps $(filter-out small-clean,$^) $(subst @, ,$*) +vcs+loopreport +define+BSG_IP_CORES_UNIT_TEST
 	./simv # | tee $@
 
 dve:
