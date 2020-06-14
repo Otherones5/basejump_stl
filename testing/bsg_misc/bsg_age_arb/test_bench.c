@@ -22,6 +22,5 @@ int main(int argc, char **argv) {
     tb->i_clk = 0;
     tb->eval();
     main_time++;
-    printf("Here!");
   } exit(EXIT_SUCCESS);
 }
